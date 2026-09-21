@@ -1,9 +1,10 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+
 import authRoutes from "./routes/authRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from 'dotenv'
 
 dotenv.config();
 
@@ -34,8 +35,8 @@ app.get("/api", (req, res) => {
 app.use("/api/auth", authRoutes);
 
 // Serve React Frontend
+// const clientPath = path.join(__dirname, "../dist");
 const clientPath = path.join(__dirname, "../dist");
-
 app.use(express.static(clientPath));
 
 // React routes

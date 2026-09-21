@@ -18,7 +18,7 @@ function CategoryBrowser() {
   };
 
   return (
-    <section className="max-w-6xl mx-auto px-6">
+    <section className="max-w-7xl  mx-auto px-2 ">
 
       {/* Category Box */}
       <div className="border border-gray-300 rounded-md overflow-hidden bg-white">
