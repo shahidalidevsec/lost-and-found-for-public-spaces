@@ -1,0 +1,13 @@
+/* Project-wide responsive polish */
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; background: #f8fafc; color: #0f172a; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+::selection { background: #bfdbfe; color: #172554; }
+
+@media (max-width: 640px) {
+  h1 { letter-spacing: -0.025em; }
+  input, select, textarea, button { min-height: 44px; }
+}

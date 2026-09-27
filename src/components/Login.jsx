@@ -1,0 +1,11 @@
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../utils/api";
+export default function Login(){
+ const { isLoggedIn, login }=useAuth(); const navigate=useNavigate(); const location=useLocation();
+ const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [error,setError]=useState(""); const [loading,setLoading]=useState(false);
+ useEffect(()=>{if(isLoggedIn) navigate("/dashboard",{replace:true});},[isLoggedIn,navigate]);
+ const submit=async e=>{e.preventDefault();setError("");setLoading(true);try{const data=await api.post("/api/auth/login",{email,password});login(data);navigate(location.state?.from||"/dashboard",{replace:true});}catch(err){setError(err.message);}finally{setLoading(false);}};
+ return <main className="grid min-h-[calc(100vh-68px)] place-items-center bg-slate-50 px-4 py-10"><div className="w-full max-w-md rounded-3xl border bg-white p-6 shadow-xl sm:p-8"><h1 className="text-3xl font-black">Welcome back</h1><p className="mt-2 text-slate-500">Your login stays active until your session expires or you logout.</p>{error&&<div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}<form onSubmit={submit} className="mt-6 space-y-5"><label className="block"><span className="mb-2 block text-sm font-bold">Email</span><input value={email} onChange={e=>setEmail(e.target.value)} type="email" required className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-4 focus:ring-blue-100"/></label><label className="block"><span className="mb-2 block text-sm font-bold">Password</span><input value={password} onChange={e=>setPassword(e.target.value)} type="password" required className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-4 focus:ring-blue-100"/></label><button disabled={loading} className="w-full rounded-xl bg-red-600 py-3.5 font-bold text-white disabled:opacity-60">{loading?"Logging in…":"Login"}</button></form><p className="mt-6 text-center text-sm text-slate-500">New here? <Link className="font-bold text-red-600" to="/register">Create an account</Link></p></div></main>;
+}
