@@ -317,7 +317,7 @@ function Register() {
         replace: true,
       });
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Registration error:", error)
 
       setError(
         error.message ||
