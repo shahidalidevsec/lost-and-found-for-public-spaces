@@ -30,6 +30,7 @@ export default function ReportLostItem() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Load existing report when editing
   useEffect(() => {
     if (!id) return;
 
@@ -51,23 +52,38 @@ export default function ReportLostItem() {
         setForm(x);
         setPreview(x.photo || "");
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        setError(e.message || "Unable to load report.");
+      });
   }, [id, user?.id]);
 
+  // Handle normal fields
   const change = (e) => {
+    const { name, value } = e.target;
+
     setForm((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: value,
     }));
   };
 
+  // Handle image upload
+  // Image is resized and compressed before being converted to Base64.
   const image = (e) => {
     const file = e.target.files?.[0];
 
     if (!file) return;
 
+    // Check image type
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image.");
+      return;
+    }
+
+    // Maximum original image size: 4 MB
     if (file.size > 4 * 1024 * 1024) {
       setError("Image must be below 4 MB.");
+      e.target.value = "";
       return;
     }
 
@@ -76,17 +92,74 @@ export default function ReportLostItem() {
     const reader = new FileReader();
 
     reader.onload = () => {
-      setForm((prev) => ({
-        ...prev,
-        photo: reader.result,
-      }));
+      const img = new Image();
 
-      setPreview(reader.result);
+      img.onload = () => {
+        // Maximum dimensions
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+
+        let width = img.width;
+        let height = img.height;
+
+        // Resize large image
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          const ratio = Math.min(
+            MAX_WIDTH / width,
+            MAX_HEIGHT / height
+          );
+
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        // Create canvas
+        const canvas = document.createElement("canvas");
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          setError("Unable to process image.");
+          return;
+        }
+
+        // Draw resized image
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Compress to JPEG
+        const compressedImage = canvas.toDataURL(
+          "image/jpeg",
+          0.75
+        );
+
+        // Save compressed image
+        setForm((prev) => ({
+          ...prev,
+          photo: compressedImage,
+        }));
+
+        // Preview
+        setPreview(compressedImage);
+      };
+
+      img.onerror = () => {
+        setError("Unable to process the selected image.");
+      };
+
+      img.src = reader.result;
+    };
+
+    reader.onerror = () => {
+      setError("Unable to read the selected image.");
     };
 
     reader.readAsDataURL(file);
   };
 
+  // Submit report
   const submit = async (e) => {
     e.preventDefault();
 
@@ -115,7 +188,11 @@ export default function ReportLostItem() {
         },
       });
     } catch (err) {
-      setError(err.message || "Unable to save report.");
+      console.error("Report submit error:", err);
+
+      setError(
+        err.message || "Unable to save report."
+      );
     } finally {
       setLoading(false);
     }
@@ -123,7 +200,11 @@ export default function ReportLostItem() {
 
   return (
     <ReportForm
-      title={id ? "Edit Lost Item Report" : "Report a Lost Item"}
+      title={
+        id
+          ? "Edit Lost Item Report"
+          : "Report a Lost Item"
+      }
       subtitle="Add accurate information so the community and matching engine can help."
       accent="red"
       form={form}
@@ -159,6 +240,7 @@ export function ReportForm({
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
 
+        {/* Header */}
         <div
           className={`rounded-3xl p-6 text-white shadow-xl sm:p-10 ${
             isGreen
@@ -168,6 +250,7 @@ export function ReportForm({
         >
           <div className="flex items-center gap-2">
             <MapPin size={22} />
+
             <span className="text-sm font-bold uppercase tracking-widest">
               {isGreen ? "Found" : "Lost"} report
             </span>
@@ -182,20 +265,27 @@ export function ReportForm({
           </p>
         </div>
 
+        {/* Error */}
         {error && (
           <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 font-semibold text-red-700">
             {error}
           </div>
         )}
 
+        {/* Form */}
         <form
           onSubmit={onSubmit}
           className="mt-6 space-y-8 rounded-3xl border bg-white p-5 shadow-sm sm:p-8"
         >
+
+          {/* User Information */}
           <section>
-            <h2 className="text-xl font-black">Your information</h2>
+            <h2 className="text-xl font-black">
+              Your information
+            </h2>
 
             <div className="mt-4 grid gap-5 sm:grid-cols-2">
+
               <Field
                 label="Name"
                 value={user?.name || ""}
@@ -216,13 +306,19 @@ export function ReportForm({
                 placeholder="Phone number"
                 required
               />
+
             </div>
           </section>
 
+          {/* Item Information */}
           <section>
-            <h2 className="text-xl font-black">Item information</h2>
+            <h2 className="text-xl font-black">
+              Item information
+            </h2>
 
             <div className="mt-4 grid gap-5 sm:grid-cols-2">
+
+              {/* Item Name */}
               <Field
                 name="itemName"
                 label="Item name *"
@@ -232,6 +328,7 @@ export function ReportForm({
                 required
               />
 
+              {/* Category */}
               <label>
                 <span className="mb-2 block text-sm font-bold">
                   Category *
@@ -244,16 +341,22 @@ export function ReportForm({
                   required
                   className="w-full rounded-xl border bg-white px-4 py-3"
                 >
-                  <option value="">Select category</option>
+                  <option value="">
+                    Select category
+                  </option>
 
                   {categories.map((c) => (
-                    <option key={c.name} value={c.name}>
+                    <option
+                      key={c.name}
+                      value={c.name}
+                    >
                       {c.name}
                     </option>
                   ))}
                 </select>
               </label>
 
+              {/* Color */}
               <Field
                 name="color"
                 label="Color"
@@ -262,6 +365,7 @@ export function ReportForm({
                 placeholder="Black, blue…"
               />
 
+              {/* Brand */}
               <Field
                 name="brand"
                 label="Brand"
@@ -270,6 +374,7 @@ export function ReportForm({
                 placeholder="Apple, Samsung…"
               />
 
+              {/* Date */}
               <Field
                 name="date"
                 label="Lost date *"
@@ -279,6 +384,7 @@ export function ReportForm({
                 required
               />
 
+              {/* Location */}
               <Field
                 name="location"
                 label="Lost location *"
@@ -288,6 +394,7 @@ export function ReportForm({
                 required
               />
 
+              {/* City */}
               <Field
                 name="city"
                 label="City *"
@@ -296,8 +403,10 @@ export function ReportForm({
                 placeholder="Mumbai"
                 required
               />
+
             </div>
 
+            {/* Description */}
             <TextArea
               name="description"
               label="Description *"
@@ -307,6 +416,7 @@ export function ReportForm({
               placeholder="Describe the item clearly…"
             />
 
+            {/* Unique Details */}
             <TextArea
               name="uniqueDetails"
               label="Unique identification details"
@@ -315,6 +425,7 @@ export function ReportForm({
               placeholder="Scratches, stickers, serial clues, case…"
             />
 
+            {/* Additional Info */}
             <TextArea
               name="additionalInfo"
               label="Additional information"
@@ -324,14 +435,23 @@ export function ReportForm({
             />
           </section>
 
+          {/* Photo */}
           <section>
-            <h2 className="text-xl font-black">Photo</h2>
+            <h2 className="text-xl font-black">
+              Photo
+            </h2>
 
             <div className="mt-4 rounded-2xl border-2 border-dashed p-5 text-center">
+
               <Camera
                 className="mx-auto text-slate-400"
                 size={32}
               />
+
+              <p className="mt-2 text-sm text-slate-500">
+                Select an image. Large images will be
+                automatically compressed.
+              </p>
 
               <input
                 type="file"
@@ -340,17 +460,20 @@ export function ReportForm({
                 className="mt-3 block w-full text-sm"
               />
 
+              {/* Image Preview */}
               {preview && (
                 <img
                   src={preview}
-                  alt="Preview"
+                  alt="Lost item preview"
                   className="mx-auto mt-5 max-h-72 rounded-2xl object-contain"
                 />
               )}
             </div>
           </section>
 
+          {/* Buttons */}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -360,6 +483,7 @@ export function ReportForm({
             </button>
 
             <button
+              type="submit"
               disabled={loading}
               className={`rounded-xl px-7 py-3 font-bold text-white disabled:opacity-60 ${
                 isGreen
@@ -376,6 +500,7 @@ export function ReportForm({
                 ? "Saving…"
                 : "Submit report"}
             </button>
+
           </div>
         </form>
       </div>
@@ -383,6 +508,7 @@ export function ReportForm({
   );
 }
 
+// Input field
 function Field({
   name,
   label,
@@ -395,6 +521,7 @@ function Field({
 }) {
   return (
     <label className="block">
+
       <span className="mb-2 block text-sm font-bold text-slate-700">
         {label}
       </span>
@@ -413,10 +540,12 @@ function Field({
             : "bg-white"
         }`}
       />
+
     </label>
   );
 }
 
+// Textarea
 function TextArea({
   name,
   label,
@@ -427,6 +556,7 @@ function TextArea({
 }) {
   return (
     <label className="mt-5 block">
+
       <span className="mb-2 block text-sm font-bold text-slate-700">
         {label}
       </span>
@@ -440,6 +570,7 @@ function TextArea({
         rows={4}
         className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-4 focus:ring-blue-100"
       />
+
     </label>
   );
 }
